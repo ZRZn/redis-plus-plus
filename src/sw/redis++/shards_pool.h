@@ -79,10 +79,16 @@ public:
     // Randomly pick a connection.
     GuardedConnection fetch();
 
+    std::size_t slot(const StringView &key);
+
     // Fetch a connection by node.
     GuardedConnection fetch(const Node &node);
 
+    GuardedConnection fetch(const SlotRange &slot_range);
+
     void update();
+
+    mutable std::map<SlotRange, int8_t> bounds;
 
     ConnectionOptions connection_options(const StringView &key);
 

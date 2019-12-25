@@ -64,6 +64,7 @@ public:
 
     Pipeline pipeline(std::shared_ptr<Connection> connection);
 
+    void mhmget_pipeline(std::unordered_map<std::string, std::vector<std::string>> hkeys);
 
     Transaction transaction(const StringView &hash_tag, bool piped = false);
 

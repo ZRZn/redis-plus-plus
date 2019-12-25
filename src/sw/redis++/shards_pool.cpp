@@ -63,6 +63,28 @@ GuardedConnection ShardsPool::fetch(const StringView &key) {
     return _fetch(slot);
 }
 
+ std::size_t ShardsPool::slot(const StringView &key) {
+     return _slot(key);
+ }
+
+GuardedConnection ShardsPool::fetch(const SlotRange &slot_range) {
+    auto shards_iter = _shards.find(slot_range);
+    if (shards_iter == _shards.end()) {
+        throw Error("Slot range not found");
+    }
+
+    const auto &node = shards_iter->second;
+
+    auto node_iter = _pools.find(node);
+    if (node_iter == _pools.end()) {
+        throw Error("Slot range is NOT covered");
+    }
+
+    assert(node_iter->second);
+
+    return GuardedConnection(node_iter->second);
+}
+
 GuardedConnection ShardsPool::fetch() {
     auto slot = _slot();
 
@@ -89,6 +111,7 @@ void ShardsPool::update() {
     // Try at most 3 times.
     for (auto idx = 0; idx < 3; ++idx) {
         try {
+            bounds.clear();
             // Randomly pick a connection.
             auto guarded_connection = fetch();
             auto shards = _cluster_slots(guarded_connection.connection());
@@ -185,8 +208,9 @@ Shards ShardsPool::_parse_reply(redisReply &reply) const {
         if (sub_reply == nullptr) {
             throw ProtoError("Null slot info");
         }
-
-        shards.emplace(_parse_slot_info(*sub_reply));
+        std::pair<SlotRange, Node> tmp_res = _parse_slot_info(*sub_reply);
+        bounds.insert(std::make_pair(tmp_res.first, 0));
+        shards.emplace(tmp_res);
     }
 
     return shards;
